@@ -19,6 +19,8 @@ export type WorkoutSet = {
   distance?: number;
   sec?: number;
   completed?: boolean;
+  heartRate?: number;
+  cadence?: number;
 };
 
 export type ActiveExercise = Exercise & {
