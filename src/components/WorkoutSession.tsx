@@ -139,12 +139,46 @@ const WorkoutSession = forwardRef<WorkoutSessionRef, WorkoutSessionProps>(({ all
     setIsSubmitting(true);
 
     try {
-        const payload = activeExercises.map(e => ({
-            exerciseId: e.id,
-            exerciseName: e.name,
-            date: new Date().toISOString(),
-            sets: e.sets
-        }));
+        const payload = activeExercises.map(e => {
+            // Filter sets based on exercise type
+            const filteredSets = e.sets.map(s => {
+                if (e.type === 'Strength') {
+                    return {
+                        id: s.id,
+                        weight: s.weight,
+                        reps: s.reps,
+                        completed: s.completed
+                    };
+                } else if (e.type === 'Sports' || e.type === 'Sport') {
+                    // Sports: Time, Sec, Heart Rate
+                    return {
+                        id: s.id,
+                        time: s.time,
+                        sec: s.sec,
+                        heartRate: s.heartRate,
+                        completed: s.completed
+                    };
+                } else {
+                    // Cardio: Time, Sec, Distance, Heart Rate, Cadence
+                    return {
+                        id: s.id,
+                        time: s.time,
+                        distance: s.distance,
+                        sec: s.sec,
+                        heartRate: s.heartRate,
+                        cadence: s.cadence,
+                        completed: s.completed
+                    };
+                }
+            });
+
+            return {
+                exerciseId: e.id,
+                exerciseName: e.name,
+                date: new Date().toISOString(),
+                sets: filteredSets
+            };
+        });
 
         const result = await submitLog(payload);
 

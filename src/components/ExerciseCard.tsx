@@ -15,17 +15,30 @@ interface StepperProps {
   onChange: (val: number) => void;
   min?: number;
   step?: number;
+  rapidStep?: number;
   label?: string;
+  labelClassName?: string;
 }
 
-function Stepper({ value, onChange, min = 0, step = 1, label }: StepperProps) {
+function Stepper({ value, onChange, min = 0, step = 1, rapidStep, label, labelClassName }: StepperProps) {
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const intervalRef = React.useRef<NodeJS.Timeout | null>(null);
   const valueRef = React.useRef(value);
   const onChangeRef = React.useRef(onChange);
+  
+  // Local state to handle empty string input and focus behavior
+  const [localValue, setLocalValue] = useState(value.toString());
 
   valueRef.current = value;
   onChangeRef.current = onChange;
+
+  // Sync local value with prop value when prop changes externally
+  // But avoid overriding if the user is currently typing (handled by checking number equality)
+  useEffect(() => {
+    if (Number(localValue) !== value) {
+      setLocalValue(value.toString());
+    }
+  }, [value]);
 
   const clearTimers = () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -35,15 +48,19 @@ function Stepper({ value, onChange, min = 0, step = 1, label }: StepperProps) {
   };
 
   const handleStart = (amount: number) => {
-    // Fix floating point precision issues (e.g. 0.1 + 0.2 = 0.30000000000000004)
+    // Fix floating point precision issues
     const fixPrecision = (val: number) => Number(val.toFixed(2));
 
     const newValue = Math.max(min, fixPrecision(valueRef.current + amount));
     onChangeRef.current(newValue);
 
+    // Determine rapid step amount
+    // If rapidStep is provided, use it. Otherwise default to 5x step or 5.
+    const absRapid = rapidStep || (step < 1 ? step * 5 : 5);
+    const rapidAmount = amount > 0 ? absRapid : -absRapid;
+
     timeoutRef.current = setTimeout(() => {
       intervalRef.current = setInterval(() => {
-        const rapidAmount = amount > 0 ? (step < 1 ? step * 5 : 5) : (step < 1 ? step * -5 : -5);
         const nextVal = Math.max(min, fixPrecision(valueRef.current + rapidAmount));
         onChangeRef.current(nextVal);
       }, 200);
@@ -55,6 +72,30 @@ function Stepper({ value, onChange, min = 0, step = 1, label }: StepperProps) {
     handleStart(amount);
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setLocalValue(val);
+    if (val === '') {
+      onChange(0);
+    } else {
+      onChange(Number(val));
+    }
+  };
+
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (value === 0) {
+      setLocalValue('');
+    } else {
+      e.target.select();
+    }
+  };
+
+  const handleBlur = () => {
+    if (localValue === '') {
+      setLocalValue('0');
+    }
+  };
+
   React.useEffect(() => () => clearTimers(), []);
 
   return (
@@ -63,24 +104,27 @@ function Stepper({ value, onChange, min = 0, step = 1, label }: StepperProps) {
         onPointerDown={handlePointerDown(-step)}
         onPointerUp={clearTimers}
         onPointerLeave={clearTimers}
-        className="w-7 h-full flex items-center justify-center text-gray-400 hover:text-blue-600 active:scale-90 transition-transform touch-none"
+        className="w-7 h-full flex items-center justify-center text-gray-400 hover:text-blue-600 active:scale-90 transition-transform touch-none select-none touch-manipulation"
       >
         <Minus className="w-3 h-3" />
       </button>
       <div className="flex-1 h-full flex items-center justify-center gap-0.5">
         <input
           type="number"
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
+          inputMode="decimal"
+          value={localValue}
+          onChange={handleInputChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           className="w-8 h-full bg-transparent text-center font-bold text-gray-900 text-sm focus:outline-none"
         />
-        {label && <span className="text-[11px] font-medium text-gray-500">{label}</span>}
+        {label && <span className={`font-medium text-gray-500 ${labelClassName || 'text-[11px]'}`}>{label}</span>}
       </div>
       <button
         onPointerDown={handlePointerDown(step)}
         onPointerUp={clearTimers}
         onPointerLeave={clearTimers}
-        className="w-7 h-full flex items-center justify-center text-gray-400 hover:text-blue-600 active:scale-90 transition-transform touch-none"
+        className="w-7 h-full flex items-center justify-center text-gray-400 hover:text-blue-600 active:scale-90 transition-transform touch-none select-none touch-manipulation"
       >
         <Plus className="w-3 h-3" />
       </button>
@@ -102,6 +146,8 @@ export default function ExerciseCard({ exercise, onRemove, onChange }: ExerciseC
       time: lastSet?.time ?? 0,
       distance: lastSet?.distance ?? 0,
       sec: lastSet?.sec ?? 0,
+      heartRate: lastSet?.heartRate ?? 0,
+      cadence: lastSet?.cadence ?? 0,
     };
     onChange([...exercise.sets, newSet]);
   };
@@ -170,9 +216,9 @@ export default function ExerciseCard({ exercise, onRemove, onChange }: ExerciseC
             </div>
 
             {/* Steppers Container */}
-            <div className={`flex-1 grid gap-2 ${isStrength ? 'grid-cols-2' : 'grid-cols-2 min-[380px]:grid-cols-3'}`}>
+            <div className="flex-1">
               {isStrength ? (
-                <>
+                <div className="grid gap-2 grid-cols-2">
                   <Stepper
                     value={set.weight || 0}
                     onChange={(val) => updateSet(set.id, { weight: val })}
@@ -186,9 +232,9 @@ export default function ExerciseCard({ exercise, onRemove, onChange }: ExerciseC
                     min={0}
                     label="reps"
                   />
-                </>
-              ) : (
-                <>
+                </div>
+              ) : isSports ? (
+                <div className="grid gap-2 grid-cols-3">
                   <Stepper
                     value={set.time || 0}
                     onChange={(val) => updateSet(set.id, { time: val })}
@@ -202,13 +248,59 @@ export default function ExerciseCard({ exercise, onRemove, onChange }: ExerciseC
                     label="s"
                   />
                   <Stepper
-                    value={set.distance || 0}
-                    onChange={(val) => updateSet(set.id, { distance: val })}
+                    value={set.heartRate || 0}
+                    onChange={(val) => updateSet(set.id, { heartRate: val })}
                     min={0}
-                    step={0.1}
-                    label="km"
+                    step={1}
+                    rapidStep={5}
+                    label="bpm"
+                    labelClassName="text-[8px]"
                   />
-                </>
+                </div>
+              ) : (
+                // Cardio
+                <div className="space-y-2">
+                  <div className="grid gap-2 grid-cols-2 min-[380px]:grid-cols-3">
+                    <Stepper
+                      value={set.time || 0}
+                      onChange={(val) => updateSet(set.id, { time: val })}
+                      min={0}
+                      label="m"
+                    />
+                    <Stepper
+                      value={set.sec || 0}
+                      onChange={(val) => updateSet(set.id, { sec: val })}
+                      min={0}
+                      label="s"
+                    />
+                    <Stepper
+                      value={set.distance || 0}
+                      onChange={(val) => updateSet(set.id, { distance: val })}
+                      min={0}
+                      step={0.1}
+                      rapidStep={1}
+                      label="km"
+                    />
+                  </div>
+                  <div className="grid gap-2 grid-cols-2">
+                    <Stepper
+                      value={set.heartRate || 0}
+                      onChange={(val) => updateSet(set.id, { heartRate: val })}
+                      min={0}
+                      step={1}
+                      rapidStep={5}
+                      label="bpm"
+                    />
+                    <Stepper
+                      value={set.cadence || 0}
+                      onChange={(val) => updateSet(set.id, { cadence: val })}
+                      min={0}
+                      step={1}
+                      rapidStep={5}
+                      label="spm"
+                    />
+                  </div>
+                </div>
               )}
             </div>
 

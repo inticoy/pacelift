@@ -154,6 +154,8 @@ export async function submitLog(data: { exerciseId: string; exerciseName: string
       if (item.distance !== undefined && item.distance > 0) properties.Distance = { number: item.distance };
       if (item.time !== undefined && item.time > 0) properties.Min = { number: item.time };
       if (item.sec !== undefined && item.sec > 0) properties.Sec = { number: item.sec };
+      if (item.heartRate !== undefined && item.heartRate > 0) properties['Heart Rate'] = { number: item.heartRate };
+      if (item.cadence !== undefined && item.cadence > 0) properties.Cadence = { number: item.cadence };
       
 
       return notion.pages.create({
@@ -216,6 +218,12 @@ export async function saveRoutine(name: string, exercises: ActiveExercise[]) {
       id: e.id,
       sets: e.sets
     }));
+    
+    const jsonString = JSON.stringify(routineItems);
+    const chunks = [];
+    for (let i = 0; i < jsonString.length; i += 2000) {
+      chunks.push(jsonString.substring(i, i + 2000));
+    }
 
     await notion.pages.create({
       parent: { data_source_id: routineDbId },
@@ -227,7 +235,7 @@ export async function saveRoutine(name: string, exercises: ActiveExercise[]) {
           relation: exerciseIds, // Still keep this for Notion UI visibility
         },
         Data: {
-          rich_text: [{ text: { content: JSON.stringify(routineItems) } }],
+          rich_text: chunks.map(chunk => ({ text: { content: chunk } })),
         },
       },
     });
@@ -265,7 +273,9 @@ export async function getRoutines(): Promise<Routine[]> {
       
       let items: { id: string; sets: WorkoutSet[] }[] = [];
       try {
-        const jsonStr = page.properties.Data?.rich_text[0]?.plain_text;
+        const richText = page.properties.Data?.rich_text || [];
+        const jsonStr = richText.map((t: any) => t.plain_text).join('');
+        
         if (jsonStr) {
             const parsed = JSON.parse(jsonStr);
             // Check if it's the new format (Array) or old format (Object)
