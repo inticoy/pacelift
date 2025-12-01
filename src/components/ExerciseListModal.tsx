@@ -13,6 +13,7 @@ interface ExerciseListModalProps {
 export default function ExerciseListModal({ isOpen, onClose, exercises, onSelect }: ExerciseListModalProps) {
   const [search, setSearch] = useState('');
   const dragControls = useDragControls();
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -23,6 +24,24 @@ export default function ExerciseListModal({ isOpen, onClose, exercises, onSelect
     }
     return () => {
       document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  // Handle Visual Viewport resize (for mobile keyboard)
+  useEffect(() => {
+    if (!isOpen || typeof window === 'undefined' || !window.visualViewport) return;
+
+    const handleResize = () => {
+      if (window.visualViewport) {
+        setViewportHeight(window.visualViewport.height);
+      }
+    };
+
+    window.visualViewport.addEventListener('resize', handleResize);
+    handleResize(); // Initial set
+
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleResize);
     };
   }, [isOpen]);
 
@@ -58,7 +77,13 @@ export default function ExerciseListModal({ isOpen, onClose, exercises, onSelect
           />
 
           {/* Modal / Bottom Sheet */}
-          <div className="fixed inset-0 z-[61] flex items-end sm:items-center justify-center pointer-events-none">
+          <div 
+            className="fixed inset-0 z-[61] flex items-end sm:items-center justify-center pointer-events-none"
+            style={{ 
+              height: viewportHeight ? `${viewportHeight}px` : '100%',
+              // Ensure the container itself respects the visual viewport
+            }}
+          >
             <motion.div
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
@@ -70,7 +95,11 @@ export default function ExerciseListModal({ isOpen, onClose, exercises, onSelect
               dragConstraints={{ top: 0 }}
               dragElastic={0.2}
               onDragEnd={handleDragEnd}
-              className="w-full max-w-md h-[85dvh] bg-white rounded-t-3xl sm:rounded-3xl flex flex-col shadow-2xl pointer-events-auto"
+              className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl flex flex-col shadow-2xl pointer-events-auto"
+              style={{
+                height: '85dvh',
+                maxHeight: viewportHeight ? `${viewportHeight}px` : '100%'
+              }}
             >
               {/* Drag Handle (Mobile Only) - Active Area */}
               <div 
