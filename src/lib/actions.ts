@@ -441,3 +441,17 @@ export async function deleteExercise(id: string) {
     return { success: false, error: error.message };
   }
 }
+
+export async function deleteRoutine(id: string) {
+  try {
+    const notion = await getNotionClient();
+    await notion.pages.update({
+      page_id: id,
+      archived: true,
+    });
+    return { success: true };
+  } catch (error: any) {
+    console.error('Failed to delete routine:', error);
+    return { success: false, error: error.message };
+  }
+}

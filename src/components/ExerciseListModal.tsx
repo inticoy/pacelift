@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Search, Check } from 'lucide-react';
 import { Exercise } from '@/lib/actions';
-import { motion, AnimatePresence, PanInfo } from 'framer-motion';
+import { motion, AnimatePresence, PanInfo, useDragControls } from 'framer-motion';
 
 interface ExerciseListModalProps {
   isOpen: boolean;
@@ -12,6 +12,19 @@ interface ExerciseListModalProps {
 
 export default function ExerciseListModal({ isOpen, onClose, exercises, onSelect }: ExerciseListModalProps) {
   const [search, setSearch] = useState('');
+  const dragControls = useDragControls();
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
   const filtered = exercises.filter((e) =>
     e.name.toLowerCase().includes(search.toLowerCase())
@@ -41,7 +54,7 @@ export default function ExerciseListModal({ isOpen, onClose, exercises, onSelect
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm touch-none"
           />
 
           {/* Modal / Bottom Sheet */}
@@ -52,18 +65,23 @@ export default function ExerciseListModal({ isOpen, onClose, exercises, onSelect
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               drag="y"
+              dragControls={dragControls}
+              dragListener={false}
               dragConstraints={{ top: 0 }}
               dragElastic={0.2}
               onDragEnd={handleDragEnd}
-              className="w-full max-w-md h-[85vh] bg-white rounded-t-3xl sm:rounded-3xl flex flex-col shadow-2xl pointer-events-auto"
+              className="w-full max-w-md h-[85dvh] bg-white rounded-t-3xl sm:rounded-3xl flex flex-col shadow-2xl pointer-events-auto"
             >
-              {/* Drag Handle (Mobile Only) */}
-              <div className="w-full flex justify-center pt-3 pb-1 sm:hidden cursor-grab active:cursor-grabbing touch-none">
+              {/* Drag Handle (Mobile Only) - Active Area */}
+              <div 
+                onPointerDown={(e) => dragControls.start(e)}
+                className="w-full flex justify-center pt-3 pb-1 sm:hidden cursor-grab active:cursor-grabbing touch-none"
+              >
                 <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
               </div>
 
               {/* Header */}
-              <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="p-4 border-b border-gray-100 flex items-center justify-between shrink-0">
                 <h3 className="font-bold text-lg">Add Exercise</h3>
                 <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full">
                   <X className="w-5 h-5" />
@@ -71,7 +89,7 @@ export default function ExerciseListModal({ isOpen, onClose, exercises, onSelect
               </div>
 
               {/* Search */}
-              <div className="p-4 pb-2">
+              <div className="p-4 pb-2 shrink-0">
                 <div className="relative">
                   <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                   <input
@@ -86,7 +104,7 @@ export default function ExerciseListModal({ isOpen, onClose, exercises, onSelect
               </div>
 
               {/* List */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-6">
+              <div className="flex-1 overflow-y-auto p-4 space-y-6 overscroll-contain">
                 {Object.entries(grouped).map(([target, items]) => (
                   <div key={target}>
                     <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">
@@ -108,7 +126,7 @@ export default function ExerciseListModal({ isOpen, onClose, exercises, onSelect
                             </div>
                             <div>
                               <div className="font-medium text-gray-900">{exercise.name}</div>
-                              <div className="text-xs text-gray-500">{exercise.type}</div>
+                              <div className="text-xs text-gray-500">{exercise.type} · {exercise.target}</div>
                             </div>
                           </div>
                           <div className="w-6 h-6 rounded-full border border-gray-200 flex items-center justify-center group-hover:border-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all">

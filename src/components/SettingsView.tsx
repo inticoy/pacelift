@@ -37,11 +37,6 @@ export default function SettingsView() {
 
   return (
     <div className="px-4 pt-20 animate-fade-in">
-      <h2 className="text-3xl font-bold mb-8 flex items-center gap-2 text-gray-900">
-        <Settings className="w-8 h-8" />
-        Settings
-      </h2>
-
       {/* Profile Section */}
       <div className="bg-white rounded-3xl p-6 mb-6">
         <div className="flex items-center gap-4">

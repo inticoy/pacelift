@@ -6,11 +6,6 @@ import { BarChart3, TrendingUp, Calendar } from 'lucide-react';
 export default function StatsView() {
   return (
     <div className="px-4 pt-20 animate-fade-in">
-      <h2 className="text-3xl font-bold mb-8 flex items-center gap-2 text-gray-900">
-        <TrendingUp className="w-8 h-8" />
-        Statistics
-      </h2>
-
       {/* Placeholder for Streak/Summary */}
       <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl p-6 text-white mb-6">
         <div className="flex items-center gap-2 mb-2 opacity-80">
