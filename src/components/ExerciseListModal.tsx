@@ -14,6 +14,7 @@ export default function ExerciseListModal({ isOpen, onClose, exercises, onSelect
   const [search, setSearch] = useState('');
   const dragControls = useDragControls();
   const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  const [viewportTop, setViewportTop] = useState<number>(0);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -34,14 +35,17 @@ export default function ExerciseListModal({ isOpen, onClose, exercises, onSelect
     const handleResize = () => {
       if (window.visualViewport) {
         setViewportHeight(window.visualViewport.height);
+        setViewportTop(window.visualViewport.offsetTop);
       }
     };
 
     window.visualViewport.addEventListener('resize', handleResize);
+    window.visualViewport.addEventListener('scroll', handleResize); // Also listen to scroll
     handleResize(); // Initial set
 
     return () => {
       window.visualViewport?.removeEventListener('resize', handleResize);
+      window.visualViewport?.removeEventListener('scroll', handleResize);
     };
   }, [isOpen]);
 
@@ -78,10 +82,11 @@ export default function ExerciseListModal({ isOpen, onClose, exercises, onSelect
 
           {/* Modal / Bottom Sheet */}
           <div 
-            className="fixed inset-0 z-[61] flex items-end sm:items-center justify-center pointer-events-none"
+            className="fixed left-0 right-0 z-[61] flex items-end sm:items-center justify-center pointer-events-none"
             style={{ 
               height: viewportHeight ? `${viewportHeight}px` : '100%',
-              // Ensure the container itself respects the visual viewport
+              top: viewportHeight ? `${viewportTop}px` : 0,
+              // Ensure the container tracks the visual viewport exactly
             }}
           >
             <motion.div
